@@ -30,11 +30,11 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_s
                              silhouette_score, davies_bouldin_score, calinski_harabasz_score)
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
-from langchain_community.llms import Groq as LangChainGroq
+from langchain_community.llms.groq import Groq as LangChainGroq
 import torch
 import os
 
