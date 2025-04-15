@@ -28,15 +28,6 @@ import numpy as np
 from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score,
                              mean_absolute_error, mean_squared_error, r2_score,
                              silhouette_score, davies_bouldin_score, calinski_harabasz_score)
-from PyPDF2 import PdfReader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
-from langchain_community.llms.groq import Groq as LangChainGroq
-import torch
-import os
 
 # Conditional import for time series models
 try:
@@ -167,10 +158,11 @@ def add_sidebar():
 APP_NAME = "DataGenie"
 
 # Initialize Groq client with API key
+GROQ_API_KEY = "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"
 try:
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    client = Groq(api_key=GROQ_API_KEY)
 except Exception as e:
-    st.error(f"Invalid Groq API key: {str(e)}. Please set GROQ_API_KEY in environment variables.")
+    st.error(f"Invalid Groq API key: {str(e)}. Please update GROQ_API_KEY.")
     st.stop()
 
 # Utility functions
@@ -308,7 +300,7 @@ def visualize_dataset(df):
             st.sidebar.download_button("Download Scatter Plot", img_bytes.getvalue(),
                                        file_name=f"scatter_{x_col}_{y_col}.png",
                                        key=f"scatter_{x_col}_{y_col}_{datetime.now().strftime('%H%M%S')}")
-        
+
         elif viz_type == "Count Plot" and categorical_cols:
             col = st.sidebar.selectbox("Select Categorical Column", categorical_cols)
             fig, ax = plt.subplots()
@@ -684,139 +676,18 @@ def chat_with_dataset(df):
         except Exception as e:
             st.error(f"Error with Groq API: {str(e)}")
 
-def process_paper_with_rag(uploaded_paper):
-    try:
-        # Extract text from PDF
-        pdf_reader = PdfReader(uploaded_paper)
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() or ""
-
-        # Split text into chunks
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
-            length_function=len
-        )
-        chunks = text_splitter.split_text(text)
-
-        # Create embeddings (no HF token required)
-        embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={'device': 'cuda' if torch.cuda.is_available() else 'cpu'}
-        )
-
-        # Create vector store
-        vectorstore = FAISS.from_texts(texts=chunks, embedding=embeddings)
-
-        # Initialize Groq LLM for LangChain
-        llm = LangChainGroq(
-            model_name="llama-3.3-70b-versatile",
-            groq_api_key=os.getenv("GROQ_API_KEY"),
-            temperature=0.5,
-            max_tokens=512
-        )
-
-        # Create conversation chain
-        memory = ConversationBufferMemory(
-            memory_key='chat_history',
-            return_messages=True
-        )
-
-        conversation_chain = ConversationalRetrievalChain.from_llm(
-            llm=llm,
-            retriever=vectorstore.as_retriever(),
-            memory=memory
-        )
-
-        return text, chunks, conversation_chain
-
-    except Exception as e:
-        st.error(f"Error processing paper: {str(e)}")
-        return None, None, None
-
-def analyze_research_paper():
-    st.header("Analyze Research Paper")
-    st.write("Upload a research paper (PDF format) to analyze and generate possible code implementations based on the paper's content.")
-    
-    # Add installation instructions
-with st.expander("Setup Instructions"):
-    st.write("""
-    Before using this feature, please install the required packages:
-    ```bash
-    pip install PyPDF2 langchain langchain-community faiss-cpu sentence-transformers torch
-    """)
-
-uploaded_paper = st.file_uploader("Upload Research Paper (PDF)", type="pdf")
-if uploaded_paper:
-    try:
-        text, chunks, conversation_chain = process_paper_with_rag(uploaded_paper)
-
-        if text and chunks and conversation_chain:
-            st.success("Research paper processed successfully!")
-
-            # Show paper chunks
-            with st.expander("View Paper Chunks"):
-                for i, chunk in enumerate(chunks):
-                    st.write(f"Chunk {i+1}:")
-                    st.text(chunk)
-
-            if st.button("Generate The Possible Code of the Paper"):
-                with st.spinner("Analyzing paper and generating code..."):
-                    # Use conversation chain to generate code
-                    response = conversation_chain({"question": "Based on this research paper, generate a detailed Python implementation of the main algorithms and methods described. Include all necessary imports and ensure the code is well-structured."})
-
-                    generated_code = response['answer']
-
-                    st.subheader("Generated Code")
-                    st.code(generated_code, language="python")
-
-                    # Allow users to download the generated code
-                    txt_bytes = BytesIO()
-                    txt_bytes.write(generated_code.encode())
-                    txt_bytes.seek(0)
-                    st.download_button(
-                        label="Download Code as TXT",
-                        data=txt_bytes,
-                        file_name="generated_code.txt",
-                        mime="text/plain"
-                    )
-
-                    # Store conversation in session state
-                    if 'chat_history' not in st.session_state:
-                        st.session_state.chat_history = []
-                    st.session_state.chat_history.append(("user", "Generate code implementation"))
-                    st.session_state.chat_history.append(("assistant", generated_code))
-
-            # Add follow-up questions section
-            st.subheader("Ask Questions About the Implementation")
-            user_question = st.text_input("Enter your question about the paper or implementation:")
-            if user_question and st.button("Ask"):
-                with st.spinner("Generating response..."):
-                    response = conversation_chain({"question": user_question})
-                    st.write("Response:", response['answer'])
-                    st.session_state.chat_history.append(("user", user_question))
-                    st.session_state.chat_history.append(("assistant", response['answer']))
-
-    except Exception as e:
-        st.error(f"Error processing the research paper: {str(e)}")
-        st.write("Please make sure you have installed all required packages:")
-        st.code("pip install PyPDF2 langchain langchain-community faiss-cpu sentence-transformers torch")
-else:
-    st.info("Upload a research paper to get started.")
-
 # Main app layout
 add_custom_styles()
 st.title("")
 add_header()
 
-tab1, tab2, tab3, tab4 = st.tabs(["Dataset Generator", "Example Prompts", "Chat with Dataset", "Analyze Research Paper"])
+tab1, tab2, tab3 = st.tabs(["Dataset Generator", "Example Prompts", "Chat with Dataset"])
 
 with tab1:
     st.header("Generate Synthetic Datasets")
     st.write("Enter a prompt to generate a synthetic dataset. Be as descriptive as possible (e.g., 'Generate 500 rows for heart risk prediction with age, common symptoms like chest pain and shortness of breath, and a risk level (yes/no)'). For more examples, check the 'Example Prompts' tab.")
     prompt = st.text_area("Your prompt:", height=100)
-
+    
     if "generated_code" not in st.session_state:
         st.session_state.generated_code = None
         st.session_state.expected_rows = None
@@ -901,9 +772,6 @@ with tab3:
             st.error(f"Error loading CSV file: {str(e)}")
     else:
         st.info("Upload a CSV file to start chatting.")
-
-with tab4:
-    analyze_research_paper()
 
 add_footer()
 
