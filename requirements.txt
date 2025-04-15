@@ -1,0 +1,15 @@
+streamlit
+pandas
+faker
+groq
+matplotlib
+seaborn
+plotly
+scikit-learn
+PyPDF2
+langchain
+langchain-community
+faiss-cpu
+sentence-transformers
+torch
+numpy
