@@ -1,14 +1,14 @@
 streamlit
 pandas
 faker
-groq
+groq==0.2.2
 matplotlib
 seaborn
 plotly
 scikit-learn
 PyPDF2
-langchain
-langchain-community
+langchain==0.1.16
+langchain-community==0.0.34
 faiss-cpu
 sentence-transformers
 torch
