@@ -1,4 +1,5 @@
-# DataGenie
+![89c59ca6-c8a8-4210-ba7b-f77a44a8fa3a_removalai_preview](https://github.com/user-attachments/assets/d0ddd341-ee95-4ba7-8045-3f5be7f1ef99)
+
 
 **DataGenie** is an AI-powered, Streamlit-based data science assistant designed to simplify and accelerate data-related workflows. Built with Python, it integrates powerful libraries like `pandas`, `scikit-learn`, `seaborn`, `plotly`, and `spacy`, along with the Groq API for AI-driven capabilities. DataGenie empowers users to generate synthetic datasets, preprocess data, perform exploratory data analysis (EDA), train machine learning models, execute natural language processing (NLP) tasks, and query datasets interactively using natural language. Whether you're a beginner exploring data science or an experienced practitioner prototyping solutions, DataGenie is your go-to tool for end-to-end data workflows.
 
